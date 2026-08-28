@@ -227,3 +227,5 @@ fluent-bit-state/*.db-wal
 
 # Rotated sensor logs
 sensor_logs/*.log.*
+
+dummy/
