@@ -81,15 +81,13 @@ resource "aws_opensearch_domain" "factory" {
   # 엑세스 정책 처음에 조회한 내용으로 설정
   access_policies = data.aws_iam_policy_document.opensearch_access.json
 
-  # 들어오는 데이터의 타입에 대한 매필 정보 제공
-  # 데이터 구조가 변경되면 => 교체해야함
-  # 이런 정보가 없으면 opensearch가 데이터를 보고 => 타입 추정 => 타입 매칭 (오류 많이 발생함)
-  # timestamp 에서 오류 발생이 많음
-  provisioner "local-exec" {
-    command = <<-EOT
-      curl -X PUT "https://${self.endpoint}/factory-sensor" \
-        -H "Content-Type: application/json" \
-        -d '{"mappings":{"properties":{"@timestamp":{"type":"date_nanos"},"timestamp":{"type":"date"},"vector_ingest_at":{"type":"date_nanos"},"sensor_id":{"type":"keyword"},"temperature":{"type":"float"},"humidity":{"type":"float"},"status":{"type":"keyword"}}}}'
-    EOT
-  }
+  # 들어오는 데이터의 타입에 대한 매핑 정보 제공
+  # local-exec 대신 배포 완료 후 PowerShell/curl 또는 Index Template으로 매핑 적용 권장
+  # provisioner "local-exec" {
+  #   command = <<-EOT
+  #     curl -X PUT "https://${self.endpoint}/factory-sensor-001" \
+  #       -H "Content-Type: application/json" \
+  #       -d '{"mappings":{"properties":{"@timestamp":{"type":"date_nanos"},"timestamp":{"type":"date"},"vector_ingest_at":{"type":"date_nanos"},"sensor_id":{"type":"keyword"},"temperature":{"type":"float"},"humidity":{"type":"float"},"status":{"type":"keyword"}}}}'
+  #   EOT
+  # }
 }

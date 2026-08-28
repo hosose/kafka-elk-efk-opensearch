@@ -1,7 +1,7 @@
 # 목표
 - kafka 이해, 활용, 응용
 - ELK, EFK에서
-    - 데이터 전송/필터링/전처리 등 역할 담당
+    - 데이터 전송/필터링/전처리 등 역활 담당
         - L:Logstash    -> 라이브러리 활용, 비정형데이터(text 로그파일) => 가공 => json 전송
         - F:Fluent-Bit  -> json 전송, text 전송
         - 센서 장비 + 장비등(배치) => 로그 발생 => 바로 전송(Fluent-Bit/Logstash) => kafka 전송 => vector => firhose => opensearch/s3 => 검색 서비스 활용
@@ -56,7 +56,7 @@ Python 로그 생성기 ┤
                    /           \
           JSON 직결             TEXT
              │                  │
-             │               HTTP
+             │               HTTP, 5022 포트
              │                  ▼
              │              Logstash
              │              Grok 변환 -> 비정형 => 반정형 처리
