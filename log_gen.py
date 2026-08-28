@@ -22,6 +22,30 @@ MAX_LOG_BYTES = 10 * 1024 * 1024    # 10MB
 BACKUP_COUNT  = 5                   # 로그 파일 최대 개수
 os.makedirs(LOG_DIR, exist_ok=True) # 로그 파일이 생기는 폴더 생성 시도
 
+# 3-3. 로그 파일별 기록, 로테이션관리등 객체 구성 -> 50MB 내에서 총 5개 파일로 로그 관리 구성
+def create_rotation_logger(name:str, filename:str) -> logging.Logger:
+    logger = logging.getLogger(name) # 고유한 문자열로 구분되는 로거 객체 획득(최초 생성)
+    logger.setLevel(logging.INFO)    # 정보 레벨만 수
+    logger.propagate = False         # 상위 레벨로 현재 로그를 전달할것인가?
+    if logger.handlers:
+        return logger
+    # 핸들러 구성 (최대 크기, 최대 개수, 로테이션)
+    handler = RotatingFileHandler(
+        os.path.join(LOG_DIR,filename), # ./sensor_logs/sensor_json.log
+        maxBytes=MAX_LOG_BYTES,
+        backupCount=BACKUP_COUNT,
+        encoding="utf-8"
+    )
+    # 포멧지정, 실제 메세지 내용만 담는 로그로 구성
+    # 레벨 x, 시간 x, 로거명 x
+    handler.setFormatter(logging.Formatter("%(message)s"))
+    logger.addHandler( logger )
+    return logger
+
+# 3-4 각 유형별 로거 생성(획득)
+json_logger = create_rotation_logger("sensor_json", "sensor_json.log")
+text_logger = create_rotation_logger("sensor_text", "sensor_text.log")
+
 # 3-2. 로그 발생
 def generate_logs() -> None:
     # opensearch에서 date로 인식하게 하기 위해서 ISO-8601 적용
@@ -33,7 +57,20 @@ def generate_logs() -> None:
         "humidity"      : round(random.uniform(30.0, 80.0), 1),   # 습도, 70% 이상 이상치(가정)
         "status"        : "RUNNING"             # 센서 상태 : 가동중
     }
-    pass
+    # A 채널 : json, dict => 직렬화 => str => 로그기록(info 레벨)
+    json_logger.info(json.dumps(data, ensure_ascii=False))
+
+    # B 채널 : text
+    # 임의 편성, 의도적으로 비정형 데이터 구성하여 로그 처리 반영, 실제는 둘중 하나만 가면됨
+    text = (
+        f"[{data['timestamp']}] ID={data['sensor_id']} |   "
+        f"TEMP:{data['temperature']} |   HUMI:{data['humidity']} |   "
+        f"STAT:{data['status']}"
+    )
+    text_logger.info(text)
+
+    # 콘솔 출력 -> 로그 발생중인지 확인
+    print( text )
 
 # 3-1. 메인함수
 def main() -> None:
