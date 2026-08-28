@@ -22,12 +22,17 @@ transforms:
     source: |
       .vector_ingest_at = now()
 
-# 3. sink (output-aws firehose)
-# sinks:
-#   firehose_sink:
-
-# 4. sink (output-debug)
+# 3. sinks (output-aws firehose & debug console)
 sinks:
+  firehose_sink:
+    type: "aws_kinesis_firehose"
+    inputs:
+      - "add_ingest_time"
+    stream_name: "${FIREHOSE_STREAM_NAME}"
+    region: "${AWS_REGION}"
+    encoding:
+      codec: "json"
+
   debug_console:
     type: "console"
     inputs:
