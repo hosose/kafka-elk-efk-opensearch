@@ -109,3 +109,23 @@ Python 로그 생성기 ┤
             # 로그 발생
             python log_gen.py            
         ```
+
+# 카프카 테스트
+- 카프카 구동 테스트
+```
+    # 접속
+    docker container exec -it kafka-local bash
+    # 토픽 생성
+    sh opt/kafka/bin/kafka-topics.sh --create --topic spacex --bootstrap-server 127.0.0.1:9092 --partitions 1 --replication-factor 1
+    
+    # 프로듀서 
+    sh opt/kafka/bin/kafka-console-producer.sh --topic spacex --bootstrap-server 127.0.0.1:9092
+    
+    # 컨슈머
+    sh opt/kafka/bin/kafka-console-consumer.sh --topic spacex --bootstrap-server 127.0.0.1:9092
+```
+- 메세지 수신 테스트
+```
+    # 컨슈머
+    sh opt/kafka/bin/kafka-console-consumer.sh --topic factory-json-topic --bootstrap-server 127.0.0.1:9092
+```
