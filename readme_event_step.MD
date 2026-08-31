@@ -174,7 +174,7 @@ Step Functions
        terraform -chdir=infra output
 
        # .env 수정
-       FIREHOSE_STREAM_NAME=de-ai-25-eb-step-pipeline-firehose
+       FIREHOSE_STREAM_NAME=de-ai-07-eb-step-pipeline-firehose
 
        # 도커 컴포즈 재구성 => vector 컨테이너의 환경변수로 설정되게 수정
        docker compose down
