@@ -1,4 +1,40 @@
-# 목표
+# 데이터 목표
+- 메달리온 아키텍쳐 기본
+- 브론즈 : 원본 데이터 
+```
+{
+  "timestamp": "2026-08-31T13:25:14+09:00",
+  "sensor_id": "SENSOR-003",
+  "temperature": 87.5,
+  "humidity": 42.1,
+  "status": "WARN"
+}
+```
+- 실버 : 정제된 데이터
+```
+{
+  "timestamp": "2026-08-31T13:25:14+09:00",
+  "sensor_id": "SENSOR-003",
+  "temperature": 87.5,
+  "humidity": 42.1,
+  "status": "WARN",
+  "year": 2026,
+  "month": 8,
+  "day": 31,
+  "hour": 13
+}
+```
+```
+silver/
+└── year=2026/
+    └── month=08/
+        └── day=31/
+            └── hour=13/
+                └── part-xxxx.parquet
+```
+- 골드
+
+# 인프라 목표
 - 기존 로그젠 => fluent-bit => kafka => vector => firehose 동일
     - kafka를 굳이 사용하는 이유?
         - 데이터 트레픽이 급상승, 처리량 많아질때 
@@ -10,19 +46,19 @@
 - firehose -> s3 bronze 적제 
                 -> EventBridge 서비스
                     => 이벤트 버스 + (스케줄)
-                        - `이벤트` 트리거 활용 메탈리온 아킥텍처 기반 전처리 수행
+                        - `이벤트` 트리거 활용 메달리온 아키텍처 기반 전처리 수행
                         - Airflow에서는 센서를 이용하여 이벤트 감지 -> task 작동
                     => [v]스케줄
-                        - 특정 시간이되면 (매시간 10분에 `스케줄링`) 메탈리온 아킥텍처 기반 전처리 수행
+                        - 특정 시간이되면 (매시간 10분에 `스케줄링`) 메달리온 아키텍처 기반 전처리 수행
                         - Airflow에서 스케쥴 적용 task 작동
                 -> 트리거 작동 -> 실제 작업(task) 진행 : Step Functions
-                    => 메탈리온 아킥텍처 기반 전처리 수행 실제 세부 task를 구성 => ... => s3 하위에 silber, gold, 기타 등등 데이터들을 처리하여 세팅 해둠 => 대시보드, 각종 서비스에서 s3를 조회하여(athena)를 활용
+                    => 메달리온 아키텍처 기반 전처리 수행 실제 세부 task를 구성 => ... => s3 하위에 silber, gold, 기타 등등 데이터들을 처리하여 세팅 해둠 => 대시보드, 각종 서비스에서 s3를 조회하여(athena)를 활용
                 -> glue등 에서 db/table등, job(전처리-pandas, polars, pyspark)을 구성 진행 -> task에 관여, 저장형태(컬럼)
 
 - 요약
     - 배치 프로세싱 기준, 저비용, 고효율 작업 구성
         - EventBridge : 트리거 역활/본 프로젝트는 스케줄만 적용
-        - Step Functions : 실제 절차적 task 담당. ETL 수행, 메탈리온 아키텍쳐 처리 task 정의
+        - Step Functions : 실제 절차적 task 담당. ETL 수행, 메달리온 아키텍쳐 처리 task 정의
         - glue : 데이터 구조에 따른 스키마, ETL JOB을 제공(스파크, pandas 활용)
         - 기타 : 권한, 변수, 등등 조정, 추가
         - firehose에서 기존 opensearch(제거)로 가는 방향성, s3로 변경
@@ -174,7 +210,7 @@ Step Functions
        terraform -chdir=infra output
 
        # .env 수정
-       FIREHOSE_STREAM_NAME=de-ai-07-eb-step-pipeline-firehose
+       FIREHOSE_STREAM_NAME=de-ai-25-eb-step-pipeline-firehose
 
        # 도커 컴포즈 재구성 => vector 컨테이너의 환경변수로 설정되게 수정
        docker compose down
@@ -221,6 +257,74 @@ sns.tf
 | 14 | `NotifyFailure`          | Task    | Lambda/Glue/Athena 등의 작업 자체가 실패했을 때 **SNS 실패 알림** 전송                                  |
 | 15 | `PipelineFailed`         | Fail    | 작업 오류를 `PipelineTaskFailed`로 **최종 실패 처리**                                             |
 
+- 작업 시퀀스
+```
+EventBridge
+    │
+    ▼
+① CheckBronze
+   Bronze 데이터 존재 여부 및
+   처리에 필요한 각종 값 생성
+    │
+    ▼
+② BronzeExists
+    │
+    ├── 데이터 없음
+    │       │
+    │       ▼
+    │   ③ NoBronzeData
+    │       정상 종료
+    │
+    └── 데이터 있음
+            │
+            ▼
+④ BronzeToSilver
+   Glue
+   Bronze → Silver
+            │
+            ▼
+⑤ RepairSilverPartitions
+   Athena
+   Silver 파티션 인식/등록
+            │
+            ▼
+⑥ CleanupExistingGold
+   Lambda
+   기존 Gold 데이터 삭제
+            │
+            ▼
+⑦ RegisterGoldPartition
+   Athena
+   Gold 파티션 등록
+            │
+            ▼
+⑧ SilverToGold
+   Athena
+   Silver → Gold 집계/저장
+            │
+            ▼
+⑨ QualityCheck
+   Lambda
+   Gold 데이터 품질 검사
+            │
+            ▼
+⑩ QualityPassed
+       │
+       ├── ok = true
+       │       ↓
+       │  ⑪ NotifySuccess
+       │     SNS 성공 알림
+       │       ↓
+       │      종료
+       │
+       └── ok = false
+               ↓
+          ⑫ NotifyQualityFailure
+             SNS 품질실패 알림
+               ↓
+          ⑬ PipelineQualityFailed
+             최종 실패
+```
 
 
 # 파이썬 파일

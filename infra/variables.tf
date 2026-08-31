@@ -49,3 +49,9 @@ variable "eb_sch_expression" {
   type        = string
   default     = "cron(10 * * * ? *)"
 }
+
+variable "glue_output_partitions" {
+  description = "Glue Job(Bronze to Silver) 출력 파티션(파일) 수"
+  type        = number
+  default     = 1
+}
