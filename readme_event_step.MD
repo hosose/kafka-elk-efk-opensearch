@@ -21,7 +21,7 @@
 
 - 요약
     - 배치 프로세싱 기준, 저비용, 고효율 작업 구성
-        - EventBridge : 트리거 역활/본 프로젝트는 스케줄만 적용
+        - EventBridge : 트리거 역할/본 프로젝트는 스케줄만 적용
         - Step Functions : 실제 절차적 task 담당. ETL 수행, 메탈리온 아키텍쳐 처리 task 정의
         - glue : 데이터 구조에 따른 스키마, ETL JOB을 제공(스파크, pandas 활용)
         - 기타 : 권한, 변수, 등등 조정, 추가
@@ -160,6 +160,34 @@ Step Functions
        - 프로젝트명, firehose 크기/시간 
 
 - 2. firehose에서 s3로 적제되게 조정 -> Data Lake 구성완료
+
+- 3. 인프라 구성
+```
+       terraform -chdir=infra fmt
+       terraform -chdir=infra validate
+       terraform -chdir=infra plan
+       terraform -chdir=infra apply
+```
+- 4. .env에 FIREHOSE_STREAM_NAME 수정
+```
+       # 이름 조회
+       terraform -chdir=infra output
+
+       # .env 수정
+       FIREHOSE_STREAM_NAME=de-ai-07-eb-step-pipeline-firehose
+
+       # 도커 컴포즈 재구성 => vector 컨테이너의 환경변수로 설정되게 수정
+       docker compose down
+       docker compose up -d
+```
+- 5. 로그 발생 -> ... -> s3://버킷/bronze/*.gzip 확인
+```
+       python log_gen.py
+```
+
+
+
+
 ```
 eventbridge.tf
 stepfunctions.tf
