@@ -21,7 +21,7 @@
 
 - 요약
     - 배치 프로세싱 기준, 저비용, 고효율 작업 구성
-        - EventBridge : 트리거 역할/본 프로젝트는 스케줄만 적용
+        - EventBridge : 트리거 역활/본 프로젝트는 스케줄만 적용
         - Step Functions : 실제 절차적 task 담당. ETL 수행, 메탈리온 아키텍쳐 처리 task 정의
         - glue : 데이터 구조에 따른 스키마, ETL JOB을 제공(스파크, pandas 활용)
         - 기타 : 권한, 변수, 등등 조정, 추가
@@ -149,7 +149,7 @@ Step Functions
         S3 Silver / Gold
 ```
 
-# 인프라 구성
+# 인프라 구성 1 (브론즈 저장까지 수정)
 - 0. opensearch 제거
        - opensearch.tf 삭제
        - variables.tf에서 opensearch 관련 변수 삭제
@@ -174,7 +174,7 @@ Step Functions
        terraform -chdir=infra output
 
        # .env 수정
-       FIREHOSE_STREAM_NAME=de-ai-07-eb-step-pipeline-firehose
+       FIREHOSE_STREAM_NAME=de-ai-25-eb-step-pipeline-firehose
 
        # 도커 컴포즈 재구성 => vector 컨테이너의 환경변수로 설정되게 수정
        docker compose down
@@ -185,15 +185,25 @@ Step Functions
        python log_gen.py
 ```
 
-
-
-
+# 인프라 구성 2
 ```
 eventbridge.tf
 stepfunctions.tf
 glue.tf
 catalog.tf
 athena.tf
-iam-xxx.tf
+lambda.tf
+iam-stepfunctions.tf
+iam-glue.tf
+iam-lambda.tf
+sns.tf
 ...
 ```
+
+# 파이썬 파일
+- etl glue job
+       - ~/glue/bronze_to_silver.py
+- lambda
+       - ~/lambda/check_bronze.py
+       - ~/lambda/cleanup_gold.py
+       - ~/lambda/quality_check.py
